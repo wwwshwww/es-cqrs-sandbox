@@ -7,7 +7,6 @@ from typing import Protocol
 class Metadata[T]:
     entity_id: T
     seq: int
-    timestamp: datetime
 
 
 @dataclass(frozen=True)

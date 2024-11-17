@@ -17,7 +17,7 @@ class UserEvent(Event, Protocol):
 class Created(UserEvent):
     metadata: Metadata[UserId]
     name: _Name
-    group_id: GroupId
+    belong_groups: list[GroupId]
 
 
 @dataclass(frozen=True)

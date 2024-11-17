@@ -10,3 +10,8 @@ class Error(Protocol):
 @dataclass(frozen=True)
 class InvalidOperationError(Error):
     message: str
+
+
+@dataclass(frozen=True)
+class InvalidValueError(Error):
+    message: str

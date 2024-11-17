@@ -1,90 +1,103 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime
-from typing import Callable
 
 from returns.pipeline import is_successful
-from returns.result import Failure, Result, ResultE, Success, safe
+from returns.result import Failure, Result, Success
 
-from es_cqrs_sandbox.command.domain.common.entity import AggregateRoot
 from es_cqrs_sandbox.command.domain.common.event import Metadata
 from es_cqrs_sandbox.command.domain.group.ids import GroupId
 
 from . import errors, events
 from .ids import UserId
 
+type UserWithEventPair = tuple[_User, events.UserEvent]
+
 
 @dataclass(frozen=True)
 class _Name:
     value: str
 
-    def __post_init__(self):
+    def validate_length(self) -> Result[None, errors.Error]:
         if (l := len(self.value)) == 0:
-            raise ValueError("Value cannot be empty")
+            return Failure(errors.InvalidValueError("Value cannot be empty"))
         elif l > 255:
-            raise ValueError("Value cannot be longer than 255 characters")
-
-
-def new_name(value: str) -> ResultE[_Name]:
-    return safe(_Name)(value)
-
-
-class _User(AggregateRoot[UserId]):
-    def __init__(
-        self,
-        _seq_manager: Callable[[int], list[int]],
-        identifier: UserId,
-        belong_groups: list[GroupId],
-        name: _Name,
-    ) -> None:
-        self._seq_manager = _seq_manager
-
-        self._identifier = identifier
-        self._belong_groups = belong_groups
-        self._name = name
-
-    @property
-    def identifier(self) -> UserId:
-        return self._identifier
-
-    def next_event_seq(self, num: int) -> list[int]:
-        return self._seq_manager(num)
-
-    @property
-    def belong_groups(self) -> list[GroupId]:
-        return self._belong_groups
-
-    @property
-    def name(self) -> _Name:
-        return self._name
-
-    def rename(self, value: _Name) -> Result[events.Renamed, errors.Error]:
-        self._name = value
-
-        event_seq = self.next_event_seq(1)[0]
-
-        return Success(
-            events.Renamed(
-                metadata=Metadata(
-                    entity_id=self._identifier,
-                    seq=event_seq,
-                    timestamp=datetime.now(),
-                ),
-                name=self._name,
+            return Failure(
+                errors.InvalidValueError("Value cannot be longer than 255 characters")
             )
+        return Success(None)
+
+
+def new_name(value: str) -> Result[_Name, errors.Error]:
+    n = _Name(value)
+    rs = n.validate_length()
+
+    if not is_successful(rs):
+        return Failure(rs.failure())
+
+    return Success(n)
+
+
+def new_name_from(value: str) -> _Name:
+    return _Name(value)
+
+
+@dataclass(frozen=True)
+class _User:
+    seq: int
+    identifier: UserId
+    belong_groups: list[GroupId]
+    name: _Name
+
+    def validate(self) -> Result[None, errors.Error]:
+        if len(self.belong_groups) == 0:
+            return Failure(errors.InvalidValueError("Belong groups cannot be empty"))
+
+        return Success(None)
+
+    def rename(self, value: _Name) -> Result[UserWithEventPair, errors.Error]:
+        instance = new_user_from(
+            self.seq,
+            self.identifier,
+            self.belong_groups,
+            value,
         )
+        e = events.Renamed(
+            metadata=Metadata(
+                entity_id=self.identifier,
+                seq=self.seq,
+            ),
+            name=value,
+        )
+        return Success((instance, e))
 
 
 def new_user(
-    seq_manager: Callable[[int], list[int]],
     identifier: UserId,
     belong_groups: list[GroupId],
     name: _Name,
-) -> Result[_User, errors.Error]:
-    rs = safe(_User)(seq_manager, identifier, belong_groups, name)
+) -> Result[UserWithEventPair, errors.Error]:
+    seq = 1
+    instance = new_user_from(seq, identifier, belong_groups, name)
 
-    if is_successful(rs):
-        return Success(rs.unwrap())
-    else:
-        return Failure(errors.InvalidOperationError(str(rs.failure())))
+    if not is_successful((rs := instance.validate())):
+        return Failure(rs.failure())
+
+    e = events.Created(
+        metadata=Metadata(
+            entity_id=identifier,
+            seq=seq,
+        ),
+        name=name,
+        belong_groups=belong_groups,
+    )
+    return Success((instance, e))
+
+
+def new_user_from(
+    seq: int,
+    identifier: UserId,
+    belong_groups: list[GroupId],
+    name: _Name,
+) -> _User:
+    return _User(seq, identifier, belong_groups, name)
