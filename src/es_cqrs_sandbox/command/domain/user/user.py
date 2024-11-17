@@ -56,8 +56,9 @@ class _User:
         return Success(None)
 
     def rename(self, value: _Name) -> Result[UserWithEventPair, errors.Error]:
+        seq = self.seq + 1
         instance = new_user_from(
-            self.seq,
+            seq,
             self.identifier,
             self.belong_groups,
             value,
@@ -65,7 +66,7 @@ class _User:
         e = events.Renamed(
             metadata=Metadata(
                 entity_id=self.identifier,
-                seq=self.seq,
+                seq=seq,
             ),
             name=value,
         )
