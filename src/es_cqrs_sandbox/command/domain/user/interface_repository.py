@@ -5,12 +5,12 @@ from returns.result import ResultE
 
 from .events import UserEvent
 from .ids import UserId
-from .user import _User
+from .user import User
 
 
 @dataclass(frozen=True)
 class SaveDto:
-    entity: _User
+    entity: User
     events: list[UserEvent]
 
 
@@ -19,7 +19,7 @@ class Repository(Protocol):
         """イベントストア & スナップショットストアへに対してデータ永続化を実施する"""
         ...
 
-    def bulk_get(self, ids: list[UserId]) -> dict[UserId, _User]:
+    def bulk_get(self, ids: list[UserId]) -> dict[UserId, User]:
         """スナップショットストアからデータを取得する"""
         ...
 
