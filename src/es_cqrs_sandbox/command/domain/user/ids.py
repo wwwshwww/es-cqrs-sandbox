@@ -1,12 +1,5 @@
-from dataclasses import dataclass
+from typing import NewType
 
-import uuid6
+from uuid6 import UUID, uuid7
 
-
-@dataclass(frozen=True)
-class UserId(uuid6.UUID):
-    value: uuid6.UUID
-
-
-def generate_user_id() -> UserId:
-    return UserId(uuid6.uuid7())
+UserId = NewType("UserId", UUID)

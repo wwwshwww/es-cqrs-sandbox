@@ -1,14 +1,19 @@
+from __future__ import annotations
+
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Protocol
+from typing import NewType, Protocol, Self, runtime_checkable
+
+from uuid6 import UUID
 
 
-@dataclass(frozen=True)
-class Metadata[T]:
-    entity_id: T
+@dataclass(slots=True, frozen=True)
+class Metadata[A: UUID]:
+    aggregate_id: A
     seq: int
+    occurred_at: datetime
 
 
-@dataclass(frozen=True)
-class Event[T](Protocol):
-    metadata: Metadata[T]
+@runtime_checkable
+class Event[A: UUID](Protocol):
+    metadata: Metadata[A]

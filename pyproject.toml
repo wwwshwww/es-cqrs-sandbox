@@ -5,7 +5,7 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
-    "returns>=0.23.0",
+    "returns[compatible-mypy]>=0.25.0",
     "uuid6>=2024.7.10",
 ]
 
@@ -15,10 +15,13 @@ build-backend = "hatchling.build"
 
 [dependency-groups]
 dev = [
-    "ipython>=8.29.0",
+    "ipython>=9.3.0",
     "mypy>=1.13.0",
-    "ruff>=0.7.3",
+    "ruff>=0.11.13",
 ]
 
 [tool.ruff.lint]
 ignore = ["F401", "E741"]
+
+[tool.mypy]
+plugins = ["returns.contrib.mypy.returns_plugin"]

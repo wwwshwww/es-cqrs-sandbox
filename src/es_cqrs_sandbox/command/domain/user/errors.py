@@ -1,17 +1,13 @@
 from dataclasses import dataclass
-from typing import Protocol
+
+type Errors = InvalidValueErr | InvalidOperationErr
 
 
-@dataclass(frozen=True)
-class Error(Protocol):
+@dataclass(slots=True, frozen=True)
+class InvalidValueErr:
     message: str
 
 
-@dataclass(frozen=True)
-class InvalidOperationError(Error):
-    message: str
-
-
-@dataclass(frozen=True)
-class InvalidValueError(Error):
+@dataclass(slots=True, frozen=True)
+class InvalidOperationErr:
     message: str

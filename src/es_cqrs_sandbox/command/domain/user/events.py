@@ -1,26 +1,32 @@
 from dataclasses import dataclass
-from typing import Protocol
 
-from es_cqrs_sandbox.command.domain.common.event import Event, Metadata
-from es_cqrs_sandbox.command.domain.group.ids import GroupId
+from es_cqrs_sandbox.command.domain.common import event
 
 from .ids import UserId
-from .user import Name
+
+type UserEvent = UserRegistered | UserRenamed | UserEmailChanged
+
+
+@dataclass(slots=True, frozen=True)
+class UserRegistered(event.Event[UserId]):
+    metadata: event.Metadata[UserId]
+
+    name: str
+    email: str
+    email_version: int = 1
+
+
+@dataclass(slots=True, frozen=True)
+class UserRenamed(event.Event[UserId]):
+    metadata: event.Metadata[UserId]
+
+    old_name: str
+    new_name: str
 
 
 @dataclass(frozen=True)
-class UserEvent(Event, Protocol):
-    metadata: Metadata[UserId]
+class UserEmailChanged(event.Event[UserId]):
+    metadata: event.Metadata[UserId]
 
-
-@dataclass(frozen=True)
-class Created(UserEvent):
-    metadata: Metadata[UserId]
-    name: Name
-    belong_groups: list[GroupId]
-
-
-@dataclass(frozen=True)
-class Renamed(UserEvent):
-    metadata: Metadata[UserId]
-    name: Name
+    old_email: str
+    new_email: str
