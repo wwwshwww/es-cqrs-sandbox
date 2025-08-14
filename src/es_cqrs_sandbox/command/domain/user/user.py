@@ -8,8 +8,8 @@ from returns import result
 from returns.pipeline import is_successful
 from uuid6 import uuid7
 
-from es_cqrs_sandbox.command.domain.common import event
 from es_cqrs_sandbox.command.domain.group.ids import GroupId
+from src.es_cqrs_sandbox.command.domain.common import types
 
 from .errors import Errors, InvalidOperationErr, InvalidValueErr
 from .events import UserEvent, UserRegistered, UserRenamed
@@ -40,7 +40,7 @@ class User:
         cls, belong_groups: list[GroupId], name: str, email: Email, timestamp: datetime
     ) -> result.Result[UserWithEventPair, Errors]:
         seq = 0
-        id_ = UserId(uuid7())
+        id_ = UserId.new()
         return (
             cls(seq=seq, id_=id_, belong_groups=belong_groups, name=name, email=email)
             .validate()
@@ -48,7 +48,7 @@ class User:
                 lambda valid_user: (
                     valid_user,
                     UserRegistered(
-                        metadata=event.Metadata(aggregate_id=valid_user.id_, seq=seq, occurred_at=timestamp),
+                        metadata=types.Metadata(aggregate_id=valid_user.id_, seq=seq, occurred_at=timestamp),
                         name=valid_user.name,
                         email=valid_user.email.value,
                     ),
@@ -71,7 +71,7 @@ class User:
                 lambda valid_user: (
                     valid_user,
                     UserRenamed(
-                        metadata=event.Metadata(aggregate_id=valid_user.id_, seq=seq, occurred_at=timestamp),
+                        metadata=types.Metadata(aggregate_id=valid_user.id_, seq=seq, occurred_at=timestamp),
                         old_name=self.name,
                         new_name=valid_user.name,
                     ),

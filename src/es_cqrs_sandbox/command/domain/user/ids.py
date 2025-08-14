@@ -1,5 +1,13 @@
-from typing import NewType
+from dataclasses import dataclass
+from typing import NewType, Self
 
-from uuid6 import UUID, uuid7
+from uuid6 import uuid7
 
-UserId = NewType("UserId", UUID)
+
+@dataclass(slots=True, frozen=True)
+class UserId:
+    value: str
+
+    @classmethod
+    def new(cls) -> Self:
+        return cls(value=str(uuid7()))
