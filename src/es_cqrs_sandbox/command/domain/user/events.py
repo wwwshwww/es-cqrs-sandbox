@@ -1,24 +1,22 @@
 from dataclasses import dataclass
 
-from src.es_cqrs_sandbox.command.domain.common import types
+from es_cqrs_sandbox.command.domain.common.types import Event
 
 from .ids import UserId
-
-type UserEvent = UserRegistered | UserRenamed | UserEmailChanged
 
 
 @dataclass(slots=True, frozen=True)
 class UserRegistered:
-    metadata: types.EventMetadata[UserId]
+    aggregate_id: UserId
 
     name: str
     email: str
-    email_version: int = 1
+    email_version: int
 
 
 @dataclass(slots=True, frozen=True)
 class UserRenamed:
-    metadata: types.EventMetadata[UserId]
+    aggregate_id: UserId
 
     old_name: str
     new_name: str
@@ -26,7 +24,11 @@ class UserRenamed:
 
 @dataclass(frozen=True)
 class UserEmailChanged:
-    metadata: types.EventMetadata[UserId]
+    aggregate_id: UserId
 
+    email_version: int
     old_email: str
     new_email: str
+
+
+type UserEvent = Event[UserRegistered] | Event[UserRenamed] | Event[UserEmailChanged]

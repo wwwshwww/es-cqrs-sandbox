@@ -1,99 +1,104 @@
-import datetime
-import uuid
+from __future__ import annotations
+
 from dataclasses import dataclass
-from typing import Self
+from datetime import datetime
+from uuid import UUID
 
-import uuid6
+from uuid6 import uuid7
 
-from .types import Event, EventId, EventMetadata
+from es_cqrs_sandbox.command.domain.common.types import Event, EventId, Id
 
 # --- aggregate sample 1 ---
 
 
 @dataclass(slots=True, frozen=True)
-class MyId:
-    value: str
+class MyId(Id):
+    value: UUID
 
     @classmethod
-    def new(cls) -> Self:
-        return cls(value=str(uuid6.uuid7()))
+    def new(self) -> MyId:
+        return MyId(uuid7())
 
 
 @dataclass(slots=True, frozen=True)
-class MyEventV1:
-    metadata: EventMetadata[MyId]
-
-    a: int
+class MyEvent1:
+    aggregate_id: MyId
+    value1: str
 
 
 @dataclass(slots=True, frozen=True)
-class MyEventV2:
-    metadata: EventMetadata[MyId]
+class MyEvent2:
+    aggregate_id: MyId
+    value2: str
+    value3: str
 
-    a: int
-    b: int
+
+type MyEvent = Event[MyEvent1] | Event[MyEvent2]
 
 
 # --- aggregate sample 2 ---
 
 
 @dataclass(slots=True, frozen=True)
-class YourId:
-    value: str
+class YourId(Id):
+    value: UUID
 
     @classmethod
-    def new(cls) -> Self:
-        return cls(value=str(uuid.uuid4()))
+    def new(self) -> YourId:
+        return YourId(uuid7())
 
 
 @dataclass(slots=True, frozen=True)
-class YourEventV1:
-    metadata: EventMetadata[YourId]
+class YourEvent1:
+    aggregate_id: YourId
+    field1: str
 
-    c: str
+
+type YourEvent = Event[YourEvent1]
 
 
 # ----------------------------
 
 
-def do_something(x: Event[MyId] | Event[YourId]) -> None:
-    print(x.metadata.aggregate_id)
+def do_something(x: MyEvent | YourEvent) -> None:
+    print(x.payload.aggregate_id)
 
 
-def test_impl_example():
-    do_something(
-        MyEventV1(
-            metadata=EventMetadata(
-                event_id=EventId.new(),
-                aggregate_id=MyId.new(),
-                seq=1,
-                occurred_at=datetime.now(),
-            ),
-            a=0,
-        )
+def test_impl_example() -> None:
+    my_id = MyId.new()
+    your_id = YourId.new()
+
+    e1 = Event(
+        id_=EventId.new(),
+        seq=1,
+        occurred_at=datetime.now(),
+        payload=MyEvent1(
+            aggregate_id=my_id,
+            value1="foo",
+        ),
     )
 
-    do_something(
-        MyEventV2(
-            metadata=EventMetadata(
-                event_id=EventId.new(),
-                aggregate_id=MyId.new(),
-                seq=1,
-                occurred_at=datetime.now(),
-            ),
-            a=0,
-            b=0,
-        )
+    e2 = Event(
+        id_=EventId.new(),
+        seq=e1.next_seq(),
+        occurred_at=datetime.now(),
+        payload=MyEvent2(
+            aggregate_id=my_id,
+            value2="oo",
+            value3="ee",
+        ),
     )
 
-    do_something(
-        YourEventV1(
-            metadata=EventMetadata(
-                event_id=EventId.new(),
-                aggregate_id=YourId.new(),
-                seq=1,
-                occurred_at=datetime.now(),
-            ),
-            c="Bob",
-        )
+    e3 = Event(
+        id_=EventId.new(),
+        seq=1,
+        occurred_at=datetime.now(),
+        payload=YourEvent1(
+            aggregate_id=your_id,
+            field1="bar",
+        ),
     )
+
+    do_something(e1)
+    do_something(e2)
+    do_something(e3)

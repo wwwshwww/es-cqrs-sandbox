@@ -8,8 +8,8 @@ from returns import result
 from returns.pipeline import is_successful
 from uuid6 import uuid7
 
+from es_cqrs_sandbox.command.domain.common.types import Event, EventId, EventPayload
 from es_cqrs_sandbox.command.domain.group.ids import GroupId
-from src.es_cqrs_sandbox.command.domain.common import types
 
 from .errors import Errors, InvalidOperationErr, InvalidValueErr
 from .events import UserEvent, UserRegistered, UserRenamed
@@ -40,6 +40,7 @@ class User:
         cls, belong_groups: list[GroupId], name: str, email: Email, timestamp: datetime
     ) -> result.Result[UserWithEventPair, Errors]:
         seq = 0
+        email_version = 0
         id_ = UserId.new()
         return (
             cls(seq=seq, id_=id_, belong_groups=belong_groups, name=name, email=email)
@@ -47,16 +48,23 @@ class User:
             .map(
                 lambda valid_user: (
                     valid_user,
-                    UserRegistered(
-                        metadata=types.Metadata(aggregate_id=valid_user.id_, seq=seq, occurred_at=timestamp),
-                        name=valid_user.name,
-                        email=valid_user.email.value,
+                    Event.new(
+                        seq=seq,
+                        occurred_at=timestamp,
+                        payload=UserRegistered(
+                            aggregate_id=id_,
+                            name=valid_user.name,
+                            email=valid_user.email.value,
+                            email_version=email_version,
+                        ),
                     ),
                 )
             )
         )
 
-    def rename(self, new_name: str, timestamp: datetime) -> result.Result[UserWithEventPair, Errors]:
+    def rename(
+        self, new_name: str, timestamp: datetime
+    ) -> result.Result[UserWithEventPair, Errors]:
         seq = self.seq + 1
         return (
             self.__class__(
@@ -70,10 +78,14 @@ class User:
             .map(
                 lambda valid_user: (
                     valid_user,
-                    UserRenamed(
-                        metadata=types.Metadata(aggregate_id=valid_user.id_, seq=seq, occurred_at=timestamp),
-                        old_name=self.name,
-                        new_name=valid_user.name,
+                    Event.new(
+                        seq=seq,
+                        occurred_at=timestamp,
+                        payload=UserRenamed(
+                            aggregate_id=self.id_,
+                            old_name=self.name,
+                            new_name=valid_user.name,
+                        ),
                     ),
                 )
             )
@@ -87,8 +99,12 @@ class Email:
     @classmethod
     def new(cls, value: str) -> result.Result[Self, Exception]:
         if (len(value) < 0) or (len(value) > 256):
-            return result.Failure(ValueError("Email length must be between 1 and 256 characters."))
+            return result.Failure(
+                ValueError("Email length must be between 1 and 256 characters.")
+            )
         if not all(x in value for x in {"@", "."}):
-            return result.Failure(ValueError("Email must contain '@' and '.' characters."))
+            return result.Failure(
+                ValueError("Email must contain '@' and '.' characters.")
+            )
 
         return result.Success(cls(value))

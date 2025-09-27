@@ -17,6 +17,7 @@ build-backend = "hatchling.build"
 dev = [
     "ipython>=9.4.0",
     "mypy>=1.17.1",
+    "pytest>=8.4.2",
     "ruff==0.12.9",
 ]
 
@@ -25,3 +26,4 @@ ignore = ["F401", "E741"]
 
 [tool.mypy]
 plugins = ["returns.contrib.mypy.returns_plugin"]
+strict = true

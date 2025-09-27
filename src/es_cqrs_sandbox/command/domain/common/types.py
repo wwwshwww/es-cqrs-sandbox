@@ -1,44 +1,57 @@
 from __future__ import annotations
 
-import uuid
 from dataclasses import dataclass
 from datetime import datetime
-from typing import NewType, Protocol, Self, runtime_checkable
+from typing import Protocol, Self, runtime_checkable
+from uuid import UUID, uuid4
 
-import uuid6
+from uuid6 import uuid7
 
 
-@runtime_checkable
 class Id(Protocol):
-    @property
-    def value(self) -> str: ...
-
     @classmethod
     def new(cls) -> Self: ...
 
 
-@dataclass(slots=True, frozen=True)
+@dataclass(frozen=True, slots=True)
 class EventId:
-    value: str
+    value: UUID
 
     @classmethod
-    def new(cls) -> Self:
-        return cls(value=str(uuid6.uuid7()))
+    def new(cls) -> EventId:
+        return EventId(uuid7())
+
+
+@runtime_checkable
+class EventPayload[T: Id](Protocol):
+    @property
+    def aggregate_id(self) -> T:
+        """集約キー。1ホールドの論理ID。downcast するとこのイベントがどの集約に帰属するかを特定可能。"""
+        ...
 
 
 @dataclass(slots=True, frozen=True)
-class EventMetadata[T: Id]:
-    event_id: EventId
+class Event[T: EventPayload[Id]]:
+    id_: EventId
     """イベントの識別子。時系列と分散ユニーク性を確保。"""
-    aggregate_id: T
-    """集約キー。1ホールドの論理ID。downcast することでこのイベントがどの集約に帰属するかを特定可能。"""
     seq: int
     """楽観ロック用。イベントの発生とともに単調増加。"""
     occurred_at: datetime
     """イベント発生時刻。"""
 
+    payload: T
+    """イベントの中身。"""
 
-@runtime_checkable
-class Event[T: Id](Protocol):
-    @property
-    def metadata(self) -> EventMetadata[T]: ...
+    @classmethod
+    def new[U: EventPayload[Id]](
+        cls, seq: int, occurred_at: datetime, payload: U
+    ) -> Event[U]:
+        return Event(
+            id_=EventId.new(),
+            seq=seq,
+            occurred_at=occurred_at,
+            payload=payload,
+        )
+
+    def next_seq(self) -> int:
+        return self.seq + 1
